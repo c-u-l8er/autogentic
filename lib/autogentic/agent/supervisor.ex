@@ -22,7 +22,7 @@ defmodule Autogentic.Agent.Supervisor do
     }
 
     case DynamicSupervisor.start_child(__MODULE__, child_spec) do
-            {:ok, pid} -> 
+            {:ok, pid} ->
         Autogentic.Agent.Registry.register_agent(name, pid, agent_module)
         {:ok, pid}
       error -> error

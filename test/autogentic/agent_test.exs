@@ -14,10 +14,10 @@ defmodule Autogentic.AgentTest do
 
         state :idle do
     end
-    
+
     state :working do
     end
-    
+
     state :complete do
     end
 
