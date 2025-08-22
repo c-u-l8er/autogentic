@@ -19,27 +19,28 @@ defmodule Autogentic.Reasoning.Engine do
   ]
 
   def start_link(opts) do
-    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
+    name = opts[:name] || __MODULE__
+    GenServer.start_link(__MODULE__, opts, name: name)
   end
 
-  def start_reasoning_session(session_id, context) do
-    GenServer.call(__MODULE__, {:start_session, session_id, context})
+  def start_reasoning_session(session_id, context, server \\ __MODULE__) do
+    GenServer.call(server, {:start_session, session_id, context})
   end
 
-  def add_reasoning_step(session_id, step) do
-    GenServer.call(__MODULE__, {:add_step, session_id, step})
+  def add_reasoning_step(session_id, step, server \\ __MODULE__) do
+    GenServer.call(server, {:add_step, session_id, step})
   end
 
-  def conclude_reasoning_session(session_id) do
-    GenServer.call(__MODULE__, {:conclude_session, session_id})
+  def conclude_reasoning_session(session_id, server \\ __MODULE__) do
+    GenServer.call(server, {:conclude_session, session_id})
   end
 
-  def query_knowledge_base(query, context \\ %{}) do
-    GenServer.call(__MODULE__, {:query_knowledge, query, context})
+  def query_knowledge_base(query, context \\ %{}, server \\ __MODULE__) do
+    GenServer.call(server, {:query_knowledge, query, context})
   end
 
-  def store_reasoning_pattern(pattern_name, pattern_data) do
-    GenServer.cast(__MODULE__, {:store_pattern, pattern_name, pattern_data})
+  def store_reasoning_pattern(pattern_name, pattern_data, server \\ __MODULE__) do
+    GenServer.cast(server, {:store_pattern, pattern_name, pattern_data})
   end
 
   # GenServer Callbacks
@@ -99,11 +100,10 @@ defmodule Autogentic.Reasoning.Engine do
         {:reply, {:error, :session_not_found}, state}
       session ->
         conclusion = synthesize_reasoning_conclusion(session)
-        final_session = %{session |
-          status: :completed,
-          conclusion: conclusion,
-          completed_at: DateTime.utc_now()
-        }
+        final_session = session
+          |> Map.put(:status, :completed)
+          |> Map.put(:conclusion, conclusion)
+          |> Map.put(:completed_at, DateTime.utc_now())
 
         # Update performance metrics
         duration = DateTime.diff(final_session.completed_at, final_session.started_at, :millisecond)
@@ -112,7 +112,7 @@ defmodule Autogentic.Reasoning.Engine do
         # Store successful reasoning patterns
         if conclusion.confidence >= 0.8 do
           pattern = extract_reasoning_pattern(final_session)
-          store_pattern_async(pattern)
+          store_pattern_async(pattern, __MODULE__)
         end
 
         updated_sessions = Map.put(state.reasoning_sessions, session_id, final_session)
@@ -148,9 +148,9 @@ defmodule Autogentic.Reasoning.Engine do
   # Core reasoning implementation (simplified for basic functionality)
 
   defp process_reasoning_step(step, context, knowledge_base) do
-    step_id = step.id || generate_step_id()
-    question = step.question
-    analysis_type = step.analysis_type || :assessment
+    step_id = Map.get(step, :id) || generate_step_id()
+    question = Map.get(step, :question, "No question provided")
+    analysis_type = Map.get(step, :analysis_type, :assessment)
 
     Logger.debug("🔍 Processing reasoning step: #{question}")
 
@@ -172,7 +172,7 @@ defmodule Autogentic.Reasoning.Engine do
       id: step_id,
       question: question,
       analysis_type: analysis_type,
-      context_required: step.context_required || [],
+      context_required: Map.get(step, :context_required, []),
       relevant_knowledge: relevant_knowledge,
       analysis_result: analysis_result,
       confidence: calculate_step_confidence(analysis_result, relevant_knowledge),
@@ -368,11 +368,11 @@ defmodule Autogentic.Reasoning.Engine do
     }
   end
 
-  defp store_pattern_async(pattern) do
+  defp store_pattern_async(pattern, server \\ __MODULE__) do
     Task.start(fn ->
-      GenServer.cast(__MODULE__, {:store_pattern, pattern.pattern_type, pattern})
+      GenServer.cast(server, {:store_pattern, pattern.pattern_type, pattern})
     end)
   end
 
-  defp generate_step_id, do: "step_#{System.unique_integer([:positive])}"
+  defp generate_step_id, do: :"step_#{System.unique_integer([:positive])}"
 end

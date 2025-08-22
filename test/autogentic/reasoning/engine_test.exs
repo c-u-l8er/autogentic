@@ -3,8 +3,9 @@ defmodule Autogentic.Reasoning.EngineTest do
   alias Autogentic.Reasoning.Engine
 
   setup do
-    # Start the reasoning engine for testing
-    {:ok, pid} = Engine.start_link([])
+    # Start the reasoning engine for testing with unique name
+    engine_name = :"reasoning_engine_#{System.unique_integer([:positive])}"
+    {:ok, pid} = Engine.start_link([name: engine_name])
 
     on_exit(fn ->
       if Process.alive?(pid) do
@@ -12,20 +13,20 @@ defmodule Autogentic.Reasoning.EngineTest do
       end
     end)
 
-    %{engine_pid: pid}
+    %{engine_pid: pid, engine_name: engine_name}
   end
 
   describe "reasoning sessions" do
-    test "can start a reasoning session" do
+    test "can start a reasoning session", %{engine_name: engine_name} do
       context = %{task: "test analysis", urgency: :normal}
 
-      assert {:ok, session_id} = Engine.start_reasoning_session("test_session_1", context)
+      assert {:ok, session_id} = Engine.start_reasoning_session("test_session_1", context, engine_name)
       assert session_id == "test_session_1"
     end
 
-    test "can add reasoning steps to a session" do
+    test "can add reasoning steps to a session", %{engine_name: engine_name} do
       context = %{task: "test analysis"}
-      {:ok, session_id} = Engine.start_reasoning_session("test_session_2", context)
+      {:ok, session_id} = Engine.start_reasoning_session("test_session_2", context, engine_name)
 
       step = %{
         id: :assess_situation,
@@ -35,7 +36,7 @@ defmodule Autogentic.Reasoning.EngineTest do
         output_format: :analysis
       }
 
-      assert {:ok, processed_step} = Engine.add_reasoning_step(session_id, step)
+      assert {:ok, processed_step} = Engine.add_reasoning_step(session_id, step, engine_name)
       assert processed_step.id == :assess_situation
       assert processed_step.question == step.question
       assert processed_step.analysis_type == :assessment
@@ -43,9 +44,9 @@ defmodule Autogentic.Reasoning.EngineTest do
       assert processed_step.confidence >= 0.0 and processed_step.confidence <= 1.0
     end
 
-    test "can conclude a reasoning session" do
+    test "can conclude a reasoning session", %{engine_name: engine_name} do
       context = %{task: "test analysis", complexity: :medium}
-      {:ok, session_id} = Engine.start_reasoning_session("test_session_3", context)
+      {:ok, session_id} = Engine.start_reasoning_session("test_session_3", context, engine_name)
 
       # Add a few reasoning steps
       steps = [
@@ -73,10 +74,10 @@ defmodule Autogentic.Reasoning.EngineTest do
       ]
 
       Enum.each(steps, fn step ->
-        Engine.add_reasoning_step(session_id, step)
+        Engine.add_reasoning_step(session_id, step, engine_name)
       end)
 
-      assert {:ok, conclusion} = Engine.conclude_reasoning_session(session_id)
+      assert {:ok, conclusion} = Engine.conclude_reasoning_session(session_id, engine_name)
 
       assert conclusion.session_id == session_id
       assert conclusion.total_steps == 3
@@ -86,7 +87,7 @@ defmodule Autogentic.Reasoning.EngineTest do
       assert conclusion.reasoning_quality in [:excellent, :good, :acceptable, :needs_improvement]
     end
 
-    test "returns error for non-existent session" do
+    test "returns error for non-existent session", %{engine_name: engine_name} do
       step = %{
         id: :test_step,
         question: "Test question?",
@@ -95,14 +96,14 @@ defmodule Autogentic.Reasoning.EngineTest do
         output_format: :analysis
       }
 
-      assert {:error, :session_not_found} = Engine.add_reasoning_step("non_existent", step)
-      assert {:error, :session_not_found} = Engine.conclude_reasoning_session("non_existent")
+      assert {:error, :session_not_found} = Engine.add_reasoning_step("non_existent", step, engine_name)
+      assert {:error, :session_not_found} = Engine.conclude_reasoning_session("non_existent", engine_name)
     end
   end
 
   describe "knowledge base queries" do
-    test "can query knowledge base" do
-      result = Engine.query_knowledge_base("deployment best practices")
+    test "can query knowledge base", %{engine_name: engine_name} do
+      result = Engine.query_knowledge_base("deployment best practices", %{}, engine_name)
 
       assert is_map(result)
       # Should find deployment-related knowledge

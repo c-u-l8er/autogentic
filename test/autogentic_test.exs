@@ -12,6 +12,9 @@ defmodule AutogenticTest do
       initial_state :ready
     end
 
+    # Debug function to check actual initial state
+    def debug_initial_state, do: @initial_state
+
     state :ready do
     end
 
@@ -20,6 +23,40 @@ defmodule AutogenticTest do
         log(:info, "Received test message")
         put_data(:message_received, true)
       end
+    end
+
+    # Ensure we have the default handle_event implementations
+    def handle_event({:call, from}, :get_state, state, data) do
+      {:keep_state_and_data, {:reply, from, {:ok, {state, data}}}}
+    end
+
+    def handle_event({:call, from}, {:get_data, key}, _state, data) do
+      value = Map.get(data.context, key)
+      {:keep_state_and_data, {:reply, from, value}}
+    end
+
+    def handle_event(:cast, {:put_data, key, value}, state, data) do
+      updated_context = Map.put(data.context, key, value)
+      updated_data = %{data | context: updated_context}
+      {:keep_state, updated_data}
+    end
+
+    def handle_event(:cast, {:execute_effect, effect}, state, data) do
+      Task.start(fn ->
+        Autogentic.Effects.Engine.execute_effect(effect, data.context)
+      end)
+      :keep_state_and_data
+    end
+
+    def handle_event(:cast, {:test_message, context}, state, data) do
+      Logger.info("Received test message with context: #{inspect(context)}")
+      :keep_state_and_data
+    end
+
+    # Default event handler for unknown events
+    def handle_event(event_type, event, state, data) do
+      Logger.warning("🤖 [simple_agent] Unhandled event #{inspect(event)} in state #{state}")
+      :keep_state_and_data
     end
   end
 

@@ -63,21 +63,22 @@ defmodule Autogentic.Agent do
 
       def init(opts) do
         Logger.info("🤖 Starting agent #{@agent_name}")
+        config = agent_config()
         state_data = %{
-          agent_id: @agent_name,
-          capabilities: @capabilities,
-          reasoning_style: @reasoning_style,
-          connections: @connections,
+          agent_id: config.name,
+          capabilities: config.capabilities,
+          reasoning_style: config.reasoning_style,
+          connections: config.connections,
           context: %{},
           started_at: DateTime.utc_now()
         }
 
-        {:ok, @initial_state, state_data}
+        {:ok, config.initial_state, state_data}
       end
 
       # Default handle_event implementation
       def handle_event({:call, from}, :get_state, state, data) do
-        {:keep_state_and_data, {:reply, from, {state, data}}}
+        {:keep_state_and_data, {:reply, from, {:ok, {state, data}}}}
       end
 
       def handle_event({:call, from}, {:get_data, key}, _state, data) do

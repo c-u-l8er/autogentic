@@ -51,6 +51,66 @@ defmodule Autogentic.AgentTest do
         put_data(:error_handled, true)
       end
     end
+
+    # Ensure we have the default handle_event implementations
+    # These should be provided by the base Agent module, but let's be explicit
+    def handle_event({:call, from}, :get_state, state, data) do
+      {:keep_state_and_data, {:reply, from, {:ok, {state, data}}}}
+    end
+
+    def handle_event({:call, from}, {:get_data, key}, _state, data) do
+      value = Map.get(data.context, key)
+      {:keep_state_and_data, {:reply, from, value}}
+    end
+
+    def handle_event(:cast, {:put_data, key, value}, state, data) do
+      updated_context = Map.put(data.context, key, value)
+      updated_data = %{data | context: updated_context}
+      {:keep_state, updated_data}
+    end
+
+    def handle_event(:cast, {:execute_effect, effect}, state, data) do
+      # Execute effect asynchronously
+      Task.start(fn ->
+        Autogentic.Effects.Engine.execute_effect(effect, data.context)
+      end)
+
+      :keep_state_and_data
+    end
+
+    def handle_event(:cast, {:broadcast_reasoning, message, targets}, state, data) do
+      Logger.info("🔗 [test_agent] Broadcasting: #{message}")
+
+      # Broadcast to connected agents
+      Enum.each(targets, fn target ->
+        if Process.whereis(target) do
+          GenStateMachine.cast(target, {:reasoning_shared, :test_agent, message, data.context})
+        end
+      end)
+
+      :keep_state_and_data
+    end
+
+    def handle_event(:cast, {:reasoning_shared, from_agent, message, context}, state, data) do
+      Logger.debug("🧠 [test_agent] Received reasoning from #{from_agent}: #{message}")
+
+      # Store reasoning for potential use
+      updated_context = Map.put(data.context, :last_shared_reasoning, %{
+        from: from_agent,
+        message: message,
+        context: context,
+        received_at: DateTime.utc_now()
+      })
+
+      updated_data = %{data | context: updated_context}
+      {:keep_state, updated_data}
+    end
+
+    # Default event handler for unknown events
+    def handle_event(event_type, event, state, data) do
+      Logger.warning("🤖 [test_agent] Unhandled event #{inspect(event)} in state #{state}")
+      :keep_state_and_data
+    end
   end
 
   setup do

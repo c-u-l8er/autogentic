@@ -185,7 +185,8 @@ defmodule Autogentic.Effects.Engine do
         # Unknown effect
         unknown ->
           Logger.warning("Unknown effect type: #{inspect(unknown)}")
-          {:error, {:unknown_effect, unknown}}
+          effect_type = if is_tuple(unknown), do: elem(unknown, 0), else: unknown
+          {:error, {:unknown_effect, effect_type}}
       end
     rescue
       error ->
@@ -209,11 +210,27 @@ defmodule Autogentic.Effects.Engine do
   defp execute_sequence(effects, context, execution_id) do
     Enum.reduce_while(effects, {:ok, context}, fn effect, {_result, acc_context} ->
       case do_execute_effect(effect, acc_context, execution_id) do
-        {:ok, new_context} when is_map(new_context) -> {:cont, {:ok, new_context}}
+        {:ok, new_context} when is_map(new_context) ->
+          # Check if this looks like a context update (has keys that are typical context keys)
+          # vs. a result object (has keys like :result, :response, etc.)
+          if is_context_update?(new_context) do
+            {:cont, {:ok, new_context}}
+          else
+            {:cont, {:ok, acc_context}}
+          end
         {:ok, _result} -> {:cont, {:ok, acc_context}}
         error -> {:halt, error}
       end
     end)
+  end
+
+  # Helper to determine if a map is a context update vs. a result
+  defp is_context_update?(map) do
+    result_keys = [:result, :response, :coordination, :thought_chain, :analysis, :conclusion]
+    map_keys = Map.keys(map)
+
+    # If the map contains typical result keys, it's probably not a context update
+    not Enum.any?(result_keys, &(&1 in map_keys))
   end
 
   defp execute_parallel(effects, context, execution_id) do
@@ -223,11 +240,26 @@ defmodule Autogentic.Effects.Engine do
 
     results = Task.await_many(tasks, 60_000)
 
+    # Check for errors first
     case Enum.find(results, fn
       {:error, _} -> true
       _ -> false
     end) do
-      nil -> {:ok, context}
+      nil ->
+        # Merge all context updates from parallel effects
+        final_context = Enum.reduce(results, context, fn result, acc_context ->
+          case result do
+            {:ok, new_context} when is_map(new_context) ->
+              if is_context_update?(new_context) do
+                Map.merge(acc_context, new_context)
+              else
+                acc_context
+              end
+            {:ok, _result} -> acc_context
+            _ -> acc_context
+          end
+        end)
+        {:ok, final_context}
       error -> error
     end
   end

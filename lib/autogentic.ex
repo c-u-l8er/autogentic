@@ -49,7 +49,8 @@ defmodule Autogentic do
   Gets the current state of an agent.
   """
   def get_agent_state(agent) do
-    GenServer.call(agent, :get_state)
+    {:ok, result} = GenServer.call(agent, :get_state)
+    result
   end
 
   @doc """
