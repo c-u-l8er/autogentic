@@ -114,6 +114,11 @@ defmodule Autogentic.Effects.Engine do
           updated_context = Map.put(context, key, value)
           {:ok, updated_context}
 
+        {:increment_data, key} ->
+          current_value = Map.get(context, key, 0)
+          updated_context = Map.put(context, key, current_value + 1)
+          {:ok, updated_context}
+
         {:get_data, key} ->
           value = Map.get(context, key)
           {:ok, value}
@@ -208,13 +213,18 @@ defmodule Autogentic.Effects.Engine do
   defp escalate_to_human_operator(_opts, _context), do: {:ok, %{escalated: true}}
 
   defp execute_sequence(effects, context, execution_id) do
-    Enum.reduce_while(effects, {:ok, context}, fn effect, {_result, acc_context} ->
+    result = Enum.reduce_while(effects, {:ok, context}, fn effect, {_result, acc_context} ->
       case do_execute_effect(effect, acc_context, execution_id) do
         {:ok, new_context} when is_map(new_context) ->
           # Check if this looks like a context update (has keys that are typical context keys)
           # vs. a result object (has keys like :result, :response, etc.)
-          if is_context_update?(new_context) do
-            {:cont, {:ok, new_context}}
+          is_context = is_context_update?(new_context)
+          Logger.debug("🔍 Effects sequence step: #{inspect(new_context)}, is_context_update: #{is_context}")
+          if is_context do
+            # Merge context updates to preserve previous increments
+            merged_context = Map.merge(acc_context, new_context)
+            Logger.debug("🔄 Merged context: #{inspect(merged_context)}")
+            {:cont, {:ok, merged_context}}
           else
             {:cont, {:ok, acc_context}}
           end
@@ -222,6 +232,9 @@ defmodule Autogentic.Effects.Engine do
         error -> {:halt, error}
       end
     end)
+
+    Logger.debug("🎯 Final sequence result: #{inspect(result)}")
+    result
   end
 
   # Helper to determine if a map is a context update vs. a result

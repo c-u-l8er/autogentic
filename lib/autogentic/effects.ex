@@ -58,6 +58,7 @@ defmodule Autogentic.Effects do
     {:delay, non_neg_integer()} |
     {:emit_event, atom(), map()} |
     {:put_data, atom(), any()} |
+    {:increment_data, atom()} |
     {:get_data, atom()} |
 
     # AI/LLM Operations
@@ -169,6 +170,9 @@ defmodule Autogentic.Effects do
 
   @doc "Store data in context"
   def put_data(key, value), do: {:put_data, key, value}
+
+  @doc "Increment a counter in context (starts at 0 if not set)"
+  def increment_data(key), do: {:increment_data, key}
 
   @doc "Retrieve data from context"
   def get_data(key), do: {:get_data, key}

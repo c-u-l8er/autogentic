@@ -5,6 +5,7 @@
 
 defmodule DecisionMakerAgent do
   use Autogentic.Agent, name: :decision_maker
+  require Logger
 
   agent :decision_maker do
     capability [:analysis, :decision_making, :risk_assessment]
@@ -47,6 +48,11 @@ defmodule DecisionMakerAgent do
       put_data(:current_phase, :ready)
       emit_event(:decision_completed, %{agent: :decision_maker})
     end
+  end
+
+  # Handle get_state calls from Autogentic.get_agent_state/1
+  def handle_event({:call, from}, :get_state, state, data) do
+    {:keep_state_and_data, {:reply, from, {:ok, {state, data}}}}
   end
 end
 

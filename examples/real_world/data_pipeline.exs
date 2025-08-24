@@ -6,6 +6,7 @@
 
 defmodule DataIngestionAgent do
   use Autogentic.Agent, name: :data_ingestion
+  require Logger
 
   agent :data_ingestion do
     capability [:data_collection, :data_validation, :stream_processing]
@@ -55,10 +56,16 @@ defmodule DataIngestionAgent do
     # Simulate record count
     :rand.uniform(1000) + 500
   end
+
+  # Handle get_state calls from Autogentic.get_agent_state/1
+  def handle_event({:call, from}, :get_state, state, data) do
+    {:keep_state_and_data, {:reply, from, {:ok, {state, data}}}}
+  end
 end
 
 defmodule DataProcessorAgent do
   use Autogentic.Agent, name: :data_processor
+  require Logger
 
   agent :data_processor do
     capability [:data_transformation, :feature_engineering, :batch_processing]
@@ -114,10 +121,16 @@ defmodule DataProcessorAgent do
   defp calculate_quality_score do
     :rand.uniform() * 0.3 + 0.7  # Score between 0.7 and 1.0
   end
+
+  # Handle get_state calls from Autogentic.get_agent_state/1
+  def handle_event({:call, from}, :get_state, state, data) do
+    {:keep_state_and_data, {:reply, from, {:ok, {state, data}}}}
+  end
 end
 
 defmodule MLAnalyzerAgent do
   use Autogentic.Agent, name: :ml_analyzer
+  require Logger
 
   agent :ml_analyzer do
     capability [:machine_learning, :pattern_recognition, :predictive_analysis]
@@ -182,10 +195,16 @@ defmodule MLAnalyzerAgent do
   defp get_confidence_score do
     :rand.uniform() * 0.2 + 0.8  # Confidence between 80% and 100%
   end
+
+  # Handle get_state calls from Autogentic.get_agent_state/1
+  def handle_event({:call, from}, :get_state, state, data) do
+    {:keep_state_and_data, {:reply, from, {:ok, {state, data}}}}
+  end
 end
 
 defmodule QualityMonitorAgent do
   use Autogentic.Agent, name: :quality_monitor
+  require Logger
 
   agent :quality_monitor do
     capability [:quality_assurance, :anomaly_detection, :monitoring]
@@ -232,6 +251,11 @@ defmodule QualityMonitorAgent do
     else
       []
     end
+  end
+
+  # Handle get_state calls from Autogentic.get_agent_state/1
+  def handle_event({:call, from}, :get_state, state, data) do
+    {:keep_state_and_data, {:reply, from, {:ok, {state, data}}}}
   end
 end
 

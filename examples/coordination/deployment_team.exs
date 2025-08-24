@@ -5,6 +5,7 @@
 
 defmodule DeploymentCoordinator do
   use Autogentic.Agent, name: :deployment_coordinator
+  require Logger
 
   agent :deployment_coordinator do
     capability [:orchestration, :decision_making]
@@ -57,10 +58,25 @@ defmodule DeploymentCoordinator do
     # Simplified for example
     0
   end
+
+  # Handle get_state calls from Autogentic.get_agent_state/1
+  def handle_event({:call, from}, :get_state, state, data) do
+    {:keep_state_and_data, {:reply, from, {:ok, {state, data}}}}
+  end
+
+  # Handle internal context merging from behaviors and transitions
+  def handle_event(:info, {:internal_merge_context, new_context}, state, data) do
+    Logger.debug("🔄 [DeploymentCoordinator] Internal merging context: #{inspect(new_context)} into existing: #{inspect(data.context)}")
+    updated_context = Map.merge(data.context, new_context)
+    updated_data = %{data | context: updated_context}
+    Logger.debug("🎯 [DeploymentCoordinator] Final internally merged context: #{inspect(updated_context)}")
+    {:keep_state, updated_data}
+  end
 end
 
 defmodule DevAgent do
   use Autogentic.Agent, name: :dev_agent
+  require Logger
 
   agent :dev_agent do
     capability [:code_validation, :build_management]
@@ -101,10 +117,25 @@ defmodule DevAgent do
       put_data(:coordinator_message_received, true)
     end
   end
+
+  # Handle get_state calls from Autogentic.get_agent_state/1
+  def handle_event({:call, from}, :get_state, state, data) do
+    {:keep_state_and_data, {:reply, from, {:ok, {state, data}}}}
+  end
+
+  # Handle internal context merging from behaviors and transitions
+  def handle_event(:info, {:internal_merge_context, new_context}, state, data) do
+    Logger.debug("🔄 [DevAgent] Internal merging context: #{inspect(new_context)} into existing: #{inspect(data.context)}")
+    updated_context = Map.merge(data.context, new_context)
+    updated_data = %{data | context: updated_context}
+    Logger.debug("🎯 [DevAgent] Final internally merged context: #{inspect(updated_context)}")
+    {:keep_state, updated_data}
+  end
 end
 
 defmodule QAAgent do
   use Autogentic.Agent, name: :qa_agent
+  require Logger
 
   agent :qa_agent do
     capability [:testing, :quality_assurance]
@@ -136,10 +167,25 @@ defmodule QAAgent do
       broadcast_reasoning("Tests completed successfully", [:deployment_coordinator])
     end
   end
+
+  # Handle get_state calls from Autogentic.get_agent_state/1
+  def handle_event({:call, from}, :get_state, state, data) do
+    {:keep_state_and_data, {:reply, from, {:ok, {state, data}}}}
+  end
+
+  # Handle internal context merging from behaviors and transitions
+  def handle_event(:info, {:internal_merge_context, new_context}, state, data) do
+    Logger.debug("🔄 [QAAgent] Internal merging context: #{inspect(new_context)} into existing: #{inspect(data.context)}")
+    updated_context = Map.merge(data.context, new_context)
+    updated_data = %{data | context: updated_context}
+    Logger.debug("🎯 [QAAgent] Final internally merged context: #{inspect(updated_context)}")
+    {:keep_state, updated_data}
+  end
 end
 
 defmodule OpsAgent do
   use Autogentic.Agent, name: :ops_agent
+  require Logger
 
   agent :ops_agent do
     capability [:infrastructure, :monitoring, :deployment]
@@ -174,6 +220,20 @@ defmodule OpsAgent do
       put_data(:post_deploy_checks_started, true)
       emit_event(:deployment_completed, %{environment: :production})
     end
+  end
+
+  # Handle get_state calls from Autogentic.get_agent_state/1
+  def handle_event({:call, from}, :get_state, state, data) do
+    {:keep_state_and_data, {:reply, from, {:ok, {state, data}}}}
+  end
+
+  # Handle internal context merging from behaviors and transitions
+  def handle_event(:info, {:internal_merge_context, new_context}, state, data) do
+    Logger.debug("🔄 [OpsAgent] Internal merging context: #{inspect(new_context)} into existing: #{inspect(data.context)}")
+    updated_context = Map.merge(data.context, new_context)
+    updated_data = %{data | context: updated_context}
+    Logger.debug("🎯 [OpsAgent] Final internally merged context: #{inspect(updated_context)}")
+    {:keep_state, updated_data}
   end
 end
 

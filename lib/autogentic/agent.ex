@@ -92,6 +92,16 @@ defmodule Autogentic.Agent do
         {:keep_state, updated_data}
       end
 
+      def handle_event(:cast, {:merge_context, new_context}, state, data) do
+        Logger.debug("🔄 [Agent] Merging context: #{inspect(new_context)} into existing: #{inspect(data.context)}")
+        updated_context = Map.merge(data.context, new_context)
+        updated_data = %{data | context: updated_context}
+        Logger.debug("🎯 [Agent] Final merged context: #{inspect(updated_context)}")
+        {:keep_state, updated_data}
+      end
+
+
+
       def handle_event(:cast, {:execute_effect, effect}, state, data) do
         # Execute effect asynchronously
         Task.start(fn ->
@@ -204,21 +214,22 @@ defmodule Autogentic.Agent do
                 # Execute the effect block
         effect = unquote(effect_block)
 
-        # Execute effect asynchronously and transition
-        Task.start(fn ->
-          case Autogentic.Effects.Engine.execute_effect(effect, data.context) do
-            {:ok, updated_context} when is_map(updated_context) ->
-              # Update context with effect results
-              GenStateMachine.cast(self(), {:put_data, :effect_result, updated_context})
-            {:ok, result} ->
-              # Store non-context results
-              GenStateMachine.cast(self(), {:put_data, :effect_result, result})
-            {:error, reason} ->
-              Logger.error("🚨 [#{@agent_name}] Effect execution failed: #{inspect(reason)}")
-          end
-        end)
-
-        {:next_state, unquote(to), data}
+        # Execute effect and merge context synchronously within transition
+        case Autogentic.Effects.Engine.execute_effect(effect, data.context) do
+          {:ok, updated_context} when is_map(updated_context) ->
+            Logger.debug("🔍 [#{@agent_name}] Transition got context: #{inspect(updated_context)}")
+            # Merge updated context directly and return updated data
+            merged_context = Map.merge(data.context, updated_context)
+            updated_data = %{data | context: merged_context}
+            Logger.debug("🎯 [#{@agent_name}] Merged context in transition: #{inspect(merged_context)}")
+            {:next_state, unquote(to), updated_data}
+          {:ok, result} ->
+            Logger.debug("🔍 [#{@agent_name}] Transition got non-context result: #{inspect(result)}")
+            {:next_state, unquote(to), data}
+          {:error, reason} ->
+            Logger.error("🚨 [#{@agent_name}] Effect execution failed: #{inspect(reason)}")
+            {:next_state, unquote(to), data}
+        end
       end
     end
   end
@@ -240,9 +251,16 @@ defmodule Autogentic.Agent do
                 # Execute behavior effect
                 effect = unquote(effect_block)
 
+                # Execute effect and merge context within behavior (async for behaviors)
                 Task.start(fn ->
                   case Autogentic.Effects.Engine.execute_effect(effect, data.context) do
+                    {:ok, updated_context} when is_map(updated_context) ->
+                      Logger.debug("🔍 [#{@agent_name}] Behavior got context: #{inspect(updated_context)}")
+                      # Send context merge message (behaviors run async, so need message-based update)
+                      GenStateMachine.cast(self(), {:merge_context, updated_context})
+                      Logger.debug("🔄 [#{@agent_name}] Sent behavior context merge")
                     {:ok, result} ->
+                      Logger.debug("🔍 [#{@agent_name}] Behavior got non-context result: #{inspect(result)}")
                       GenStateMachine.cast(self(), {:put_data, :behavior_result, result})
                     {:error, reason} ->
                       Logger.error("🚨 [#{@agent_name}] Behavior #{unquote(name)} failed: #{inspect(reason)}")
@@ -261,9 +279,16 @@ defmodule Autogentic.Agent do
                   # Execute behavior effect
                   effect = unquote(effect_block)
 
+                  # Execute effect and merge context within behavior (async for behaviors)
                   Task.start(fn ->
                     case Autogentic.Effects.Engine.execute_effect(effect, data.context) do
+                      {:ok, updated_context} when is_map(updated_context) ->
+                        Logger.debug("🔍 [#{@agent_name}] Behavior got context: #{inspect(updated_context)}")
+                        # Send context merge message (behaviors run async, so need message-based update)
+                        GenStateMachine.cast(self(), {:merge_context, updated_context})
+                        Logger.debug("🔄 [#{@agent_name}] Sent behavior context merge")
                       {:ok, result} ->
+                        Logger.debug("🔍 [#{@agent_name}] Behavior got non-context result: #{inspect(result)}")
                         GenStateMachine.cast(self(), {:put_data, :behavior_result, result})
                       {:error, reason} ->
                         Logger.error("🚨 [#{@agent_name}] Behavior #{unquote(name)} failed: #{inspect(reason)}")

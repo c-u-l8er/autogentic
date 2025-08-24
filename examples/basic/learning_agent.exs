@@ -5,6 +5,7 @@
 
 defmodule AdaptiveLearningAgent do
   use Autogentic.Agent, name: :learning_agent
+  require Logger
 
   agent :learning_agent do
     capability [:learning, :adaptation, :pattern_recognition]
@@ -54,7 +55,7 @@ defmodule AdaptiveLearningAgent do
   behavior :adaptive_response, triggers_on: [:experience_event] do
     sequence do
       log(:debug, "⚡ Processing experience event")
-      put_data(:experiences_processed, get_experience_count() + 1)
+      increment_data(:experiences_processed)
       store_reasoning_pattern("experience_pattern", get_current_pattern())
     end
   end
@@ -63,7 +64,7 @@ defmodule AdaptiveLearningAgent do
   behavior :success_learning, triggers_on: [:success_outcome] do
     sequence do
       log(:info, "✅ Learning from successful outcome")
-      put_data(:successful_outcomes, get_success_count() + 1)
+      increment_data(:successful_outcomes)
       learn_from_outcome("success_pattern", get_success_details())
       update_behavior_model("success_model", get_model_updates())
     end
@@ -72,25 +73,36 @@ defmodule AdaptiveLearningAgent do
   # Learn from failures
   behavior :failure_learning, triggers_on: [:failure_outcome] do
     sequence do
-      log(:warn, "❌ Learning from failure outcome")
-      put_data(:failure_outcomes, get_failure_count() + 1)
+      log(:warning, "❌ Learning from failure outcome")
+      increment_data(:failure_outcomes)
       learn_from_outcome("failure_pattern", get_failure_details())
-      adapt_coordination_strategy(get_new_strategy())
+      {:adapt_coordination_strategy, get_new_strategy()}
     end
   end
 
   # Helper functions (simplified for example)
   defp get_observation_count, do: :rand.uniform(100) + 50
   defp get_learned_patterns, do: ["pattern_a", "pattern_b", "pattern_c"]
-  defp get_experience_count, do: 0  # Would track real experiences
-  defp get_success_count, do: 0
-  defp get_failure_count, do: 0
 
   defp get_current_pattern, do: %{type: :adaptive, confidence: 0.8}
   defp get_success_details, do: %{strategy: :collaborative, outcome: :positive}
   defp get_failure_details, do: %{strategy: :isolated, outcome: :negative}
   defp get_model_updates, do: %{weight_adjustment: 0.1, bias_correction: 0.05}
   defp get_new_strategy, do: %{approach: :cautious, coordination_level: :high}
+
+  # Handle get_state calls from Autogentic.get_agent_state/1
+  def handle_event({:call, from}, :get_state, state, data) do
+    {:keep_state_and_data, {:reply, from, {:ok, {state, data}}}}
+  end
+
+  # Handle internal context merging from behaviors and transitions
+  def handle_event(:info, {:internal_merge_context, new_context}, state, data) do
+    Logger.debug("🔄 [AdaptiveLearningAgent] Internal merging context: #{inspect(new_context)} into existing: #{inspect(data.context)}")
+    updated_context = Map.merge(data.context, new_context)
+    updated_data = %{data | context: updated_context}
+    Logger.debug("🎯 [AdaptiveLearningAgent] Final internally merged context: #{inspect(updated_context)}")
+    {:keep_state, updated_data}
+  end
 end
 
 # Example demonstrating continuous learning
@@ -105,6 +117,9 @@ defmodule ContinuousLearningDemo do
 
     # Simulate learning cycles
     simulate_learning_cycles(agent_pid)
+
+    # Wait a bit more before showing final progress to ensure all async effects completed
+    Process.sleep(500)
 
     # Show learning progress
     show_learning_progress(agent_pid)
@@ -126,7 +141,7 @@ defmodule ContinuousLearningDemo do
     IO.puts("\n✅ Processing successful experiences...")
     GenStateMachine.cast(agent_pid, :success_outcome)
     GenStateMachine.cast(agent_pid, :experience_event)
-    Process.sleep(100)
+    Process.sleep(500)  # Wait longer for async effects to complete
 
     # Cycle 2: Adaptive learning
     IO.puts("\n📚 Learning Cycle 2:")
@@ -136,7 +151,7 @@ defmodule ContinuousLearningDemo do
     IO.puts("\n❌ Processing failure experiences...")
     GenStateMachine.cast(agent_pid, :failure_outcome)
     GenStateMachine.cast(agent_pid, :experience_event)
-    Process.sleep(100)
+    Process.sleep(500)  # Wait longer for async effects to complete
 
     # Cycle 3: Advanced adaptation
     IO.puts("\n📚 Learning Cycle 3:")
@@ -174,6 +189,8 @@ defmodule ContinuousLearningDemo do
 
     {_state, data} = Autogentic.get_agent_state(agent_pid)
     context = data.context
+
+    IO.puts("🔍 DEBUG: Full agent context: #{inspect(context, pretty: true)}")
 
     IO.puts("Observations collected: #{context[:observations_collected] || 0}")
     IO.puts("Experiences processed: #{context[:experiences_processed] || 0}")
