@@ -9,3 +9,9 @@ _build
 .env.development
 .env.test
 .env.production
+
+# Ignore package tarball (built via "mix hex.build").
+autogentic-*.tar
+
+# Where third-party dependencies like ExDoc output generated docs.
+/doc/

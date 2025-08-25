@@ -1,9 +1,9 @@
-# 🧠 Autogentic v2.0: Next-Generation Multi-Agent System
+# 🧠 Autogentic
 
-[![Tests](https://img.shields.io/badge/tests-64%20passing-brightgreen)](https://github.com/your-org/autogentic)
-[![Version](https://img.shields.io/badge/version-2.0.0-blue)](https://github.com/your-org/autogentic)
+[![Tests](https://img.shields.io/badge/tests-64%20passing-brightgreen)](https://github.com/c-u-l8er/autogentic)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue)](https://github.com/c-u-l8er/autogentic)
 [![Elixir](https://img.shields.io/badge/elixir-~>%201.15-purple)](https://elixir-lang.org/)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache%202.0-green)](LICENSE)
 
 **Revolutionary effects-first architecture that makes traditional multi-agent systems look primitive.**
 
@@ -51,7 +51,7 @@ Autogentic v2.0 is a sophisticated multi-agent system built with Elixir that ena
 ### Installation
 
 ```bash
-git clone https://github.com/your-org/autogentic.git
+git clone https://github.com/c-u-l8er/autogentic.git
 cd autogentic
 mix deps.get
 ```
@@ -286,7 +286,7 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/autogentic.git
+git clone https://github.com/c-u-l8er/autogentic.git
 cd autogentic
 
 # Install dependencies
@@ -310,12 +310,12 @@ mix run examples/basic/hello_agent.exs
 ## 💬 Community
 
 - **Discord**: [Join our community](https://discord.gg/autogentic)
-- **GitHub Discussions**: [Ask questions and share ideas](https://github.com/your-org/autogentic/discussions)
+- **GitHub Discussions**: [Ask questions and share ideas](https://github.com/c-u-l8er/autogentic/discussions)
 - **Blog**: [Read about Autogentic developments](https://blog.autogentic.ai)
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
@@ -328,7 +328,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 **Ready to build the future of intelligent systems?** 🚀
 
 ```bash
-git clone https://github.com/your-org/autogentic.git
+git clone https://github.com/c-u-l8er/autogentic.git
 cd autogentic
 mix deps.get
 iex -S mix

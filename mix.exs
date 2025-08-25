@@ -3,7 +3,7 @@ defmodule Autogentic.MixProject do
 
   @version "1.0.0"
   @description "Next-generation multi-agent system with advanced effects, AI reasoning, and continuous learning"
-  @source_url "https://github.com/your-org/autogentic"
+  @source_url "https://github.com/c-u-l8er/autogentic"
 
   def project do
     [
@@ -85,8 +85,8 @@ defmodule Autogentic.MixProject do
   defp package do
     [
       name: "autogentic",
-      maintainers: ["Your Name"],
-      licenses: ["MIT"],
+      maintainers: ["Travis Burandt"],
+      licenses: ["Apache-2.0"],
       links: %{"GitHub" => @source_url},
       files: ~w(lib priv .formatter.exs mix.exs README.md LICENSE)
     ]
