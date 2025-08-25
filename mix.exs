@@ -1,7 +1,7 @@
 defmodule Autogentic.MixProject do
   use Mix.Project
 
-  @version "2.0.0"
+  @version "1.0.0"
   @description "Next-generation multi-agent system with advanced effects, AI reasoning, and continuous learning"
   @source_url "https://github.com/your-org/autogentic"
 
